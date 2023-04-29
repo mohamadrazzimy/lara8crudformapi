@@ -1,0 +1,478 @@
+<head>
+	<link href='https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css' rel='stylesheet'>
+	<script src='https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js'></script>
+	<script src='https://code.jquery.com/jquery-3.3.1.min.js'></script>
+	<script>API_URL='https://tvxle.ciroue.com'</script>
+	<script>
+	$(document).ready(function() {
+		var access_token = sessionStorage.getItem("access_token") || '';
+		if(access_token) {
+			if(access_token == '') {
+				$('#modal_login').modal('show');
+			} else {
+				$('#main_container').show();
+			}
+		} else {
+			$('#modal_login').modal('show');
+		}
+		$(function() {
+			$('[data-toggle="tooltip"]').tooltip()
+		})
+	});
+	function switchLoginMode(strg_mode) {
+		$(document).ready(function() {
+			switch(strg_mode) {
+				case 'signup':
+					$('#login_title').html('Sign Up');
+					$('#login_button').html('Sign Up');
+					$('.signup_mode').show();
+					$('.login_mode').hide();
+					break;
+				case 'login':
+					$('#login_title').html('Login');
+					$('#login_button').html('Login');
+					$('.signup_mode').hide();
+					$('.login_mode').show();
+					break;
+			}
+		});
+	}
+	function updateSessionAndReload(access_token = '') {
+		if(access_token != '') {
+			sessionStorage.setItem('access_token', access_token);
+			$('[id^="login_input"]').val('');
+			location.reload();
+		} else {
+			sessionStorage.removeItem('access_token');
+		}
+	}
+	function doLoginSignUp(strg_mode) {
+		sessionStorage.removeItem('access_token');
+		switch($('#login_button').text()) {
+			case 'Login':
+				var settings = {
+					"url": "https://tvxle.ciroue.com/api/login",
+					"method": "POST",
+					"timeout": 0,
+					"headers": {
+						"Content-Type": "application/json",
+						"Accept": "application/json"
+					},
+					"data": JSON.stringify({
+						"email": $('#login_input_email').val(),
+						"password": $('#login_input_password').val()
+					}),
+				};
+				$.ajax(settings).done(function(data, textStatus, jqXHR) {
+					console.log('data:', data);
+					console.log('textStatus:', textStatus);
+					console.log('jqXHR:', jqXHR);
+					alert("login successful")
+					$('[id^="login_input"]').val('');
+					var access_token = data['access_token'] || '';
+					updateSessionAndReload(access_token);
+				});
+				$.ajax(settings).fail(function(jqXHR, textStatus, errorThrown) {
+					console.log('jqXHR:', jqXHR);
+					console.log('textStatus:', textStatus);
+					console.log('errorThrown:', errorThrown);
+					alert('login failed:' + jqXHR.responseJSON.message);
+					$('[id^="login_input"]').val('');
+					updateSessionAndReload();
+				})
+				break;
+			case 'Sign Up':
+				console.log($('#login_input_password').val());
+				console.log($('#login_input_confirm_password').val());
+				if($('#login_input_password').val() == $('#login_input_confirm_password').val()) {
+					var settings = {
+						"url": "https://tvxle.ciroue.com/api/register",
+						"method": "POST",
+						"timeout": 0,
+						"headers": {
+							"Accept": "application/json",
+							"Content-Type": "application/json"
+						},
+						"data": JSON.stringify({
+							"name": $('#login_input_name').val(),
+							"email": $('#login_input_email').val(),
+							"password": $('#login_input_password').val()
+						}),
+					};
+					$.ajax(settings).done(function(data, textStatus, jqXHR) {
+						console.log('data:', data);
+						console.log('textStatus:', textStatus);
+						console.log('jqXHR:', jqXHR);
+						alert('sign up successful.');
+						$('[id^="login_input"]').val('');
+						var access_token = data['access_token'] || '';
+						updateSessionAndReload(access_token);
+					}).fail(function(jqXHR, textStatus, errorThrown) {
+						console.log('jqXHR:', jqXHR);
+						console.log('textStatus:', textStatus);
+						console.log('errorThrown:', errorThrown);
+						alert('sign up failed.' + jqXHR.responseJSON.message);
+						$('[id^="login_input"]').val('');
+					})
+				}
+				break;
+		}
+	}
+
+	function doLogout() {
+		sessionStorage.removeItem('access_token');
+		location.reload();
+	}
+	</script>
+</head>
+
+<body onload='get_staff_list()'>
+	<div id='main_container' class='container' style='display:none'>
+		<h1>Staff Manager</h1>
+		<button type='button' class='btn btn-warning' onclick='doLogout()'> Logout </button>
+		<button class='btn btn-info' onclick='create_staff()'>register staff</button>
+		<table id='staff_table' class="table table-bordered mt-3">
+			<thead>
+				<tr>
+				<td> id </td>
+				<td> name </td>
+				<td> email </td>
+				<td> dept </td>
+				<td> bran </td>
+				<td> action </td>
+			</tr>
+			<thead>
+			<tbody>
+			</tbody>
+		</table>
+
+	</div>
+	<!-- modal: login (begin)-->
+	<div class='modal fade bg-dark' id='modal_login' data-backdrop='false'>
+		<div class='modal-dialog modal-dialog-centered' role='document'>
+			<div class='modal-content'>
+				<div class='modal-header border-bottom-0'>
+					<!-- 
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">x</span></button>
+      -->
+				</div>
+				<div class='modal-body'>
+					<div class='form-title text-center'>
+						<h4 id='login_title'>Login</h4> </div>
+					<div class='d-flex flex-column text-center'>
+						<form>
+							<div class='mb-3 signup_mode' style='display:none;'>
+								<input type='email' class='form-control' id='login_input_name' placeholder='Name...'> </div>
+							<div class='mb-3'>
+								<input type='email' class='form-control' id='login_input_email' placeholder='Email address...'> </div>
+							<div class='mb-3'>
+								<input type='password' class='form-control' id='login_input_password' placeholder='Password...'> </div>
+							<div class='mb-3 signup_mode' style='display:none;'>
+								<input type='password' class='form-control' id='login_input_confirm_password' placeholder='Confirm Password...'> </div>
+							<button id='login_button' type='button' class='w-100 btn btn-info' onclick='doLoginSignUp()'>Login</button>
+						</form>
+					</div>
+				</div>
+				<div class='modal-footer d-flex justify-content-center'>
+					<div class='login_mode' style='display:block;'>Not a member yet? <a href='javascript: switchLoginMode("signup");'> Sign Up</a>. </div>
+					<div class='signup_mode' style='display:none;'>Already have account? <a href='javascript: switchLoginMode("login");'> Login</a>. </div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- modal: login (end)-->
+	<!-- modal: edit staff (begin)-->
+	<div class='modal fade' id='modal_edit_staff'>
+		<div class='modal-dialog'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='modal_edit_staff_title'>-</h5>
+					<button type='button' class='btn-close' data-bs-dismiss='modal' 
+					onclick='reset_form_edit_staff_select_dept();reset_form_edit_staff_select_bran();'>
+					</button>
+				</div>
+				<div class='modal-body'>
+					<form id='form_edit_staff'>
+						<div class='mb-3' id='div_edit_staff_id'>
+							<label for='input_edit_staff_id' class='col-form-label'>Staff id:</label>
+							<input type='text' class='form-control input_edit_staff' id='input_edit_staff_id' disabled> </div>
+						<div class='mb-3'>
+							<label for='input_edit_staff_name' class='col-form-label'>Staff Name:</label>
+							<input type='text' class='form-control input_edit_staff' id='input_edit_staff_name'> </div>
+						<div class='mb-3'>
+							<label for='input_edit_staff_email' class='col-form-label'>Staff Email:</label>
+							<input type='text' class='form-control input_edit_staff' id='input_edit_staff_email'> </div>
+						<div class='mb-3'>
+							<select id='input_edit_staff_dept' class='form-select input_edit_staff'>
+							<option>Select Department</option>
+							</select>
+						</div>
+						<div class='mb-3'>
+							<select id='input_edit_staff_bran' class='form-select input_edit_staff'>
+							<option>Select Branch</option>
+							</select>
+						</div>
+					</form>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-secondary' data-bs-dismiss='modal' 
+					onclick='reset_form_edit_staff_select_dept();reset_form_edit_staff_select_bran();'>Close</button>
+					<button type="button" class="btn btn-primary" 
+					onclick="save_staff()">Save</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- modal: edit staff (end)-->
+	<!-- modal: delete staff (begin)-->
+	<div class='modal fade' id='modal_delete_staff'>
+		<div class='modal-dialog'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h5 class='modal-title' id='modal_edit_staff_title'>Confirm Deletion</h5>
+					<button type='button' class='btn-close' data-bs-dismiss='modal'>
+					</button>
+				</div>
+				<div class='modal-body'>
+					<p>
+						Do you want to delete <span id="input_delete_staff_name"></span> ?
+
+					</p>
+				</div>
+				<div class='modal-footer'>
+					<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
+					<button type="button" id="button_delete_staff" class="btn btn-danger" data-id="-">Delete</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- modal: delete staff (end)-->
+
+	<script>
+	/* declare an array to store staff records fetched from backend */
+	var arry_staff = [];
+	/* get staff records from backend */
+	function get_staff_list() {
+		var settings = {
+			"url": "https://tvxle.ciroue.com/api/staff/record",
+			"method": "GET",
+			"timeout": 0,
+			"headers": {
+				"Content": "application/json",
+				"Accept": "application/json",
+				"Authorization": "Bearer " + (sessionStorage.getItem("access_token") || '')
+			}
+		};
+		$.ajax(settings)
+		.done(update_staff_list);
+	}
+	/* update UI with staff records from backend*/
+	function update_staff_list(response) {
+		console.log(response)
+		arry_staff = response;
+		var html = '';
+		arry_staff.forEach(function(item, index) {
+			console.log(item);
+			html += '<tr>';
+			const keys = Object.keys(item);
+			keys.forEach(function(key) {
+				html += '<td> ' + item[key] + ' </td>';
+			})
+			html += '<td><button class = "btn btn-primary" ' 
+			+ 'onclick = "edit_staff(' + index + ')" > Edit </button>';
+			html += '<button class = "btn btn-danger" ' 
+			+ 'onclick= "delete_staff(' + index + ')">Delete</button></td></tr>';
+		})
+		 $('#staff_table > tbody').html(html);
+	}
+	/* create new staff record */
+	function create_staff() {
+		$('#modal_edit_staff').modal('show');
+		$('#modal_edit_staff_title').text("New");
+		$('#div_edit_staff_id').hide();
+		get_department_list('input_edit_staff_dept');
+	}
+	/* edit existing staff record */
+	function edit_staff(index){
+  		$('#modal_edit_staff').modal('show') ;
+  		$('#modal_edit_staff_title').text("Edit");
+  		$('#div_edit_staff_id').show();
+
+		$('#input_edit_staff_id').val(arry_staff[index]['id']);
+		$('#input_edit_staff_name').val(arry_staff[index]['s_name']);
+		$('#input_edit_staff_email').val(arry_staff[index]['s_email']);
+		get_department_list('input_edit_staff_dept',arry_staff[index]['s_dept']);
+		get_branch_list(arry_staff[index]['s_dept'],'input_edit_staff_bran',arry_staff[index]['s_bran']);
+	}
+	/* save staff record */
+	function save_staff(index){
+		strg_task =$('#modal_edit_staff_title').text();
+		var strg_staff_id=$('#input_edit_staff_id').val()||"";
+        var objt_staff = {
+          	"s_name": $('#input_edit_staff_name').val()||"",
+          	"s_email": $('#input_edit_staff_email').val()||"",
+          	"s_dept": $('#input_edit_staff_dept').val()||"",
+          	"s_bran": $('#input_edit_staff_bran').val()||""
+        }    
+		console.log("staff id:",strg_staff_id);
+		console.log("staff object:",objt_staff); 
+
+		switch (strg_task){
+			case "New":
+				//alert("new");
+        		var settings = {
+          			"url": API_URL+"/api/insert",
+          			"method": "POST",
+          			"timeout": 0,
+		  			"headers": {
+		  				"Content-Type": "application/json",		  
+		  				"Accept": "application/json",
+		  				"Authorization": "Bearer " + (sessionStorage.getItem("access_token") || '')
+		  			},
+          			"data": JSON.stringify({
+            			"e": "staff",
+            			"reco": objt_staff
+          			}),
+        		};
+        		console.log(settings);
+        		$.ajax(settings).done(function(response) {
+          			console.log(response);
+          			$("[id^='input']").val("");
+					$('#modal_edit_staff').modal('hide');
+          			get_staff_list();
+        		});
+			break;
+			case "Edit":
+				//alert("edit");
+        		var settings = {
+          			"url": API_URL+"/api/update",
+          			"method": "POST",
+          			"timeout": 0,
+		  			"headers": {
+		  				"Content-Type": "application/json",		  
+		  				"Accept": "application/json",
+		  				"Authorization": "Bearer " + (sessionStorage.getItem("access_token") || '')
+		  			},
+          			"data": JSON.stringify({
+            			"e": "staff",
+						"id": strg_staff_id,
+            			"reco": objt_staff
+          			}),
+        		};
+        		console.log(settings);
+        		$.ajax(settings).done(function(response) {
+          			console.log(response);
+          			$("[id^='input']").val("");
+					$('#modal_edit_staff').modal('hide');
+          			get_staff_list();
+        		});			
+			break;
+		}/*switch*/
+	}/* save staff record (end) */
+
+	/* delete staff record */
+	function delete_staff(intg_arry_staff_id){
+		$('#modal_delete_staff').modal('show');
+		$('#input_delete_staff_name')
+		.text(arry_staff[parseInt(intg_arry_staff_id)]['s_name']);
+		$('#button_delete_staff').on("click", function(e){
+			$('#modal_delete_staff').modal('hide');
+			$('#input_delete_staff_name').text('');
+			do_delete_staff(intg_arry_staff_id);
+		});
+	}
+	/* do delete staff record */	
+	function do_delete_staff(intg_arry_staff_id){
+		alert(intg_arry_staff_id);
+		location.reload();
+	}
+
+
+
+
+	/* get department list */
+    function get_department_list(strgid,strgselect=null) {
+          $('#input_edit_staff_dept').html(
+    '<option selected disabled="disabled">Loading ...</option>'); 
+        var settings = {
+          "url": API_URL+"/api/dept/record",
+          "method": "GET",
+          "timeout": 0,
+		  "headers": {
+		  	"Content-Type": "application/json",		  
+		  	"Accept": "application/json",
+		  	"Authorization": "Bearer " + (sessionStorage.getItem("access_token") || '')
+		  }
+        };
+        $.ajax(settings).done(function(response){
+          var html="";
+          var arry_dept=response;
+          arry_dept.forEach(function(item){
+          console.log(item);
+          html+='<option value="'+item['s_code']+'">'+item['s_name']+'</option>'
+          });
+     
+            $('#'+strgid).html(
+    '<option selected disabled="disabled">Select Department</option>');
+            $('#'+strgid).append(html);
+
+          if (strgselect!=null){
+            $('#'+strgid).val(strgselect);
+          }
+
+          console.log(strgselect);
+        });
+      }
+
+	/* detect changes in select department */
+	$('#input_edit_staff_dept').on('change', function() {
+  		get_branch_list(this.value,'input_edit_staff_bran'); 
+	});
+
+	/* get branch list */
+      function get_branch_list(deptcode,strgid,strgselect=null) {
+        console.log(deptcode);
+        $('#input_edit_staff_bran').html(
+    '<option selected disabled="disabled">Loading ...</option>');
+        var url=API_URL+"/api/bran/record_where/s_dept/'"+String(deptcode)+"'";
+        console.log('url:',url);
+
+        var settings = {
+          "url": url,
+          "method": "GET",
+          "timeout": 0,
+		  "headers": {
+		  	"Content-Type": "application/json",		  
+		  	"Accept": "application/json",
+		  	"Authorization": "Bearer " + (sessionStorage.getItem("access_token") || '')
+		  }
+        };
+        $.ajax(settings).done(function(response){
+          var html="";
+          var arry_bran=response;
+          arry_bran.forEach(function(item){
+          console.log(item);
+          html+='<option value="'+item['s_code']+'">'+item['s_name']+'</option>'
+          });
+            $('#'+strgid).html(
+    '<option selected disabled="disabled">Select Branch</option>');
+            $('#'+strgid).append(html);
+
+          
+          if (strgselect!=null){
+            $('#'+strgid).val(strgselect);
+          }
+          
+        });
+      }
+	/* reset select box controls */
+	function reset_form_edit_staff_select_dept(){
+  		$('#input_edit_staff_dept').html('<option>Select Department</option>');
+	}
+	function reset_form_edit_staff_select_bran(){
+  		$('#input_edit_staff_bran').html('<option>Select Branch</option>');    
+	}
+	</script>
+</body>
+
+</html>
